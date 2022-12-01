@@ -1,3 +1,4 @@
+// An example to build from each day
 use std::fs;
 use parse_display::{Display, FromStr};
 
