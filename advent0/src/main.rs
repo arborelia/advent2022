@@ -1,16 +1,33 @@
-// A starting point with an example I'll probably follow often in Advent of Code.
+use std::fs;
 use parse_display::{Display, FromStr};
-const INPUT: &'static str = "bee 20";
+
+pub const TEST_INPUT: &str = "bee 20";
 
 #[derive(Display, FromStr, PartialEq, Debug)]
-#[display("{a} {b}")]
-struct ExampleStruct {
-    a: String,
-    b: i64
+#[display("{word} {num}")]
+struct Example {
+  word: String,
+  num: i64,
 }
 
-fn main() -> () {
-    let parsed: ExampleStruct = INPUT.parse().unwrap();
-    let (a, b) = (parsed.a, parsed.b);
-    println!("{a} {b}");
+
+fn get_num(input: &str) -> i64 {
+    let parsed: Example = input.parse().unwrap();
+    parsed.num
+}
+
+
+fn main() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    println!("{}", get_num(&input));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse() {
+        assert_eq!(get_num(TEST_INPUT), 20);
+    }
 }
