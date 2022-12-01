@@ -1,6 +1,6 @@
 use std::fs;
 
-pub const TEST_INPUT: &'static str = "
+pub const TEST_INPUT: &str = "
 1000
 2000
 3000
@@ -16,6 +16,16 @@ pub const TEST_INPUT: &'static str = "
 
 10000
 ";
+
+pub const TEST_INPUT_2: &str = "
+1
+
+2
+3
+
+4
+5
+6";
 
 
 fn max_weight(input: &str) -> i64 {
@@ -33,6 +43,9 @@ fn max_weight(input: &str) -> i64 {
             current_weight += val;
         }
     }
+    if current_weight > max {
+        max = current_weight;
+    }
     max
 }
 
@@ -49,6 +62,7 @@ fn max_weight_3(input: &str) -> i64 {
             current_weight += val;
         }
     }
+    weights.push(current_weight);
     weights.sort();
     weights.reverse();
     let total = weights[0..3].iter().sum();
@@ -69,6 +83,11 @@ mod tests {
     #[test]
     fn test_part1() {
         assert_eq!(max_weight(TEST_INPUT), 24000);
+    }
+
+    #[test]
+    fn test_last_line() {
+        assert_eq!(max_weight(TEST_INPUT_2), 15);
     }
 
     #[test]
