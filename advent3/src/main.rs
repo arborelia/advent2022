@@ -1,6 +1,5 @@
 // An example to build from each day
 use std::fs;
-use parse_display::{Display, FromStr};
 use std::collections::{HashSet};
 use intersection::hash_set::intersection;
 
@@ -33,6 +32,8 @@ fn intersect_triple(s1: &str, s2: &str, s3: &str) -> char {
     let set1 = char_set(s1);
     let set2 = char_set(s2);
     let set3 = char_set(s3);
+    // the external library 'intersection' lets us intersect sets to get a set, which
+    // is important here
     if let Some(&ch) = intersection([set1, set2, set3]).iter().next() {
         ch
     } else {
@@ -58,9 +59,25 @@ fn intersect_halves_sum(input: &str) -> i64 {
     total
 }
 
+fn intersect_triples_sum(input: &str) -> i64 {
+    let mut total: i64 = 0;
+    let lines: Vec<&str> = input.lines().collect();
+    let nlines = lines.len();
+    for i in 0..(nlines/3) {
+        let letter = intersect_triple(
+            lines[3 * i],
+            lines[3 * i + 1],
+            lines[3 * i + 2]
+        );
+        total += letter_value(letter)
+    }
+    total
+}
+
 fn main() {
     let input = fs::read_to_string("input.txt").unwrap();
     println!("{}", intersect_halves_sum(&input));
+    println!("{}", intersect_triples_sum(&input));
 }
 
 #[cfg(test)]
