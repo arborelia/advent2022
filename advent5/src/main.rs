@@ -55,15 +55,26 @@ fn top_crates_str(stacks: &[Vec<char>]) -> String {
 }
 
 impl CrateMove {
-    fn apply(&self, stacks: &mut [Vec<char>]) {
-        for _i in 0..self.howmany {
-            let got: char = stacks[self.source - 1].pop().unwrap();
-            stacks[self.target - 1].push(got);
+    fn apply(&self, stacks: &mut [Vec<char>], has_leather_seats: bool) {
+        if has_leather_seats {
+            // the CrateMover 9001 picks up multiple crates in a stack. also it has leather
+            // seats. that's why I called the variable that.
+            let n = stacks[self.source - 1].len();
+            let grab_base = n - self.howmany;
+            let grabbed: Vec<char> = stacks[self.source - 1][grab_base..n].iter().cloned().collect();
+            stacks[self.target - 1].extend(grabbed.iter());
+            stacks[self.source - 1].drain(grab_base..n);
+        } else {
+            // the CrateMover 9000 picks up crates one at a time
+            for _i in 0..self.howmany {
+                let grabbed: char = stacks[self.source - 1].pop().unwrap();
+                stacks[self.target - 1].push(grabbed);
+            }
         }
     }
 }
 
-fn apply_moves(input: &str) -> Vec<Vec<char>> {
+fn apply_moves(input: &str, has_leather_seats: bool) -> Vec<Vec<char>> {
     let input_lines: Vec<&str> = input.lines().collect();
     let mut boundary: usize = 0;
     for i in 0..input_lines.len() {
@@ -79,15 +90,18 @@ fn apply_moves(input: &str) -> Vec<Vec<char>> {
     let mut stacks: Vec<Vec<char>> = parse_crate_picture(&input_lines[0..boundary]);
     for &line in input_lines[(boundary + 1)..].iter() {
         let crate_move: CrateMove = line.parse().unwrap();
-        crate_move.apply(&mut stacks);
+        crate_move.apply(&mut stacks, has_leather_seats);
     }
     stacks
 }
 
 fn main() {
     let input = fs::read_to_string("input.txt").unwrap();
-    let stacks: Vec<Vec<char>> = apply_moves(&input);
-    println!("top crates: {}", top_crates_str(&stacks));
+    let stacks: Vec<Vec<char>> = apply_moves(&input, false);
+    println!("CrateMover 9000: {}", top_crates_str(&stacks));
+
+    let stacks9001: Vec<Vec<char>> = apply_moves(&input, true);
+    println!("CrateMover 9001: {}", top_crates_str(&stacks9001));
 }
 
 #[cfg(test)]
@@ -102,7 +116,11 @@ mod tests {
     }
     #[test]
     fn test_example() {
-        assert_eq!(top_crates_str(&apply_moves(TEST_INPUT)), "CMZ");
+        assert_eq!(top_crates_str(&apply_moves(TEST_INPUT, false)), "CMZ");
     }
 
+    #[test]
+    fn test_example_9001() {
+        assert_eq!(top_crates_str(&apply_moves(TEST_INPUT, true)), "MCD");
+    }
 }
