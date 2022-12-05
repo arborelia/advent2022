@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "advent0"
+name = "advent4"
 version = "0.1.0"
 dependencies = [
  "parse-display",
