@@ -28,7 +28,8 @@ $ ls
 5626152 d.ext
 7214296 k";
 
-
+/// This struct represents each line in the elf's shell session, and provides a parse-display
+/// implementation for each type of line, telling us how to parse it.
 #[derive(Display, FromStr, PartialEq, Debug, Clone)]
 enum ElfShellLine {
     #[display("$ ls")]
@@ -41,6 +42,8 @@ enum ElfShellLine {
     FileEntry { name: String, size: i64 },
 }
 
+/// An entry in the filesystem is either a directory, mapping names to entries, or a file, which
+/// has a size.
 #[derive(Debug)]
 enum FilesystemEntry {
     Dir { contents: HashMap<String, FilesystemEntry> },
@@ -48,6 +51,8 @@ enum FilesystemEntry {
 }
 
 impl FilesystemEntry {
+    /// In the shell session, we've seen a file at a particular path, and we know its size.
+    /// Put it into the filesystem in that path, creating more directories if necessary.
     fn put_in_path(&mut self, path: &[String], filename: &str, size: i64) {
         match self {
             FilesystemEntry::File { size: _ } => {
@@ -77,6 +82,7 @@ impl FilesystemEntry {
         }
     }
 
+    /// The total size of a file or directory
     fn size(&self) -> i64 {
         match self {
             FilesystemEntry::File { size } => *size,
@@ -86,6 +92,7 @@ impl FilesystemEntry {
         }
     }
 
+    /// A list of directories in this filesystem, found recursively in depth-first order.
     fn depth_first_dirs(&self) -> Vec<&FilesystemEntry> {
         let mut dirs = Vec::new();
         match self {
@@ -100,6 +107,7 @@ impl FilesystemEntry {
         }
     }
 
+    /// An implementation of part 1: find all the small enough directories and add up their size.
     fn size_of_small_dirs(&self, cutoff: i64) -> i64 {
         match self {
             FilesystemEntry::File { size: _ } => 0,
@@ -115,6 +123,7 @@ impl FilesystemEntry {
         }
     }
 
+    /// Used in part 2: find the smallest directory with size at least min_size.
     fn find_dir_to_delete(&self, min_size: i64) -> &FilesystemEntry {
         let mut dir_to_delete: Option<&FilesystemEntry> = None;
         let mut smallest_size: i64 = i64::MAX;
@@ -128,14 +137,16 @@ impl FilesystemEntry {
         dir_to_delete.unwrap()
     }
 
-    fn size_of_dir_to_delete(&self, space_needed: i64) -> i64 {
-        let min_size: i64 = self.size() - space_needed;
+    /// Implementation of part 2: we need the size of the filesystem to be no more than
+    /// max_size. Find the smallest directory to delete that will make this work.
+    fn size_of_dir_to_delete(&self, max_size: i64) -> i64 {
+        let min_size: i64 = self.size() - max_size;
         self.find_dir_to_delete(min_size).size()
     }
 }
 
 
-
+/// Read the elf's shell session and build a filesystem based on what we see.
 fn read_dir_tree(input: &str) -> Result<FilesystemEntry, Box<dyn Error>> {
     let mut path: Vec<String> = Vec::new();
     let mut filesystem = FilesystemEntry::Dir { contents: HashMap::new() };
@@ -154,6 +165,8 @@ fn read_dir_tree(input: &str) -> Result<FilesystemEntry, Box<dyn Error>> {
             ElfShellLine::FileEntry { name, size } => {
                 filesystem.put_in_path(&path, &name, size);
             },
+            // We don't do anything with the 'dir' entries -- we'll create the directories when we
+            // see a file inside them.
             ElfShellLine::DirEntry { name: _ } => {},
             ElfShellLine::ListFiles => {}
         }
@@ -165,6 +178,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = fs::read_to_string("input.txt")?;
     let filesystem = read_dir_tree(&input)?;
     println!("sum of small directories: {}", filesystem.size_of_small_dirs(100_000));
+    // We can subtract numbers. We need room for a 30 MB thing on a 70 MB filesystem, so the rest of
+    // the filesystem has a max size of 40 MB.
     println!("size of dir to delete: {}", filesystem.size_of_dir_to_delete(40_000_000));
     Ok(())
 }
