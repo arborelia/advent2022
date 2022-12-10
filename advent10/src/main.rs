@@ -197,9 +197,46 @@ fn signal_strength(input: &str, start: i64, interval: i64, stop: i64) -> i64 {
 }
 
 
+fn draw_pixel(register: i64, elapsed: i64, row_size: i64) {
+    let xpos = elapsed % row_size;
+    if xpos == 0 {
+        println!();
+    }
+    if (register - xpos).abs() <= 1 {
+        print!("#");
+    } else {
+        print!(".");
+    }
+}
+
+
+fn draw_sprite(input: &str, row_size: i64) {
+    let mut elapsed: i64 = 0;
+    let mut register: i64 = 1;
+    for line in input.split("\n") {
+        let inst: CPUInstruction = line.parse().unwrap();
+        match inst {
+            CPUInstruction::Noop => {
+                draw_pixel(register, elapsed, row_size);
+                elapsed += 1;
+            },
+            CPUInstruction::AddX(val) => {
+                draw_pixel(register, elapsed, row_size);
+                elapsed += 1;
+                draw_pixel(register, elapsed, row_size);
+                elapsed += 1;
+                register += val;
+            }
+        }
+    }
+}
+
+
 fn main() {
     let input = fs::read_to_string("input.txt").unwrap();
     println!("signal strength: {}", signal_strength(&input, 20, 40, 220));
+
+    draw_sprite(&input, 40);
 }
 
 #[cfg(test)]
