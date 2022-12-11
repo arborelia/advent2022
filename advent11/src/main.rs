@@ -1,10 +1,13 @@
 // An example to build from each day
+use std::cell::RefCell;
 use std::error::Error;
 use std::fs;
 use std::fmt;
 use std::num::ParseIntError;
 use std::str::FromStr;
 use parse_display::{Display, FromStr};
+
+const DEBUG: bool = false;
 
 pub const TEST_INPUT: &str = "Monkey 0:
   Starting items: 79, 98
@@ -74,7 +77,7 @@ impl Operation {
 }
 
 #[derive(PartialEq, Debug)]
-struct ItemList(Vec<i64>);
+struct ItemList(RefCell<Vec<i64>>);
 
 impl FromStr for ItemList {
     type Err = ParseIntError;
@@ -83,14 +86,15 @@ impl FromStr for ItemList {
         for num_str in s.split(", ") {
             nums.push(num_str.parse()?);
         }
-
-        Ok(ItemList(nums))
+        let cell = RefCell::new(nums);
+        Ok(ItemList(cell))
     }
 }
 
 impl fmt::Display for ItemList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (idx, num) in self.0.iter().enumerate() {
+        let items: &Vec<i64> = &self.0.borrow();
+        for (idx, num) in items.iter().enumerate() {
             if idx > 0 {
                 write!(f, ", ")?;
             }
@@ -105,19 +109,19 @@ impl Monkey {
     /// Returns a tuple of the target monkey index, and the new "worry value" of the item.
     fn inspect_and_throw_item(&self, worry: i64) -> (usize, i64) {
         let mut value = worry;
-        println!("Monkey {} inspects an item with a worry level of {}.", self.id, worry);
+        // println!("Monkey {} inspects an item with a worry level of {}.", self.id, worry);
         value = self.op.apply(value);
-        println!("Value after operation is {}.", value);
+        // println!("Value after operation is {}.", value);
         value /= 3;
-        println!("Value is divided by 3 to give {}.", value);
+        // println!("Value is divided by 3 to give {}.", value);
         let target = if value % self.div == 0 {
-            println!("Value is divisible by {}.", self.div);
+            // println!("Value is divisible by {}.", self.div);
             self.true_target
         } else {
-            println!("Value is not divisible by {}.", self.div);
+            // println!("Value is not divisible by {}.", self.div);
             self.false_target
         };
-        println!("Item with worry level {} is thrown to monkey {}.\n", value, target);
+        // println!("Item with worry level {} is thrown to monkey {}.\n", value, target);
         (target, value)
     }
 }
@@ -131,34 +135,38 @@ fn parse_monkey_list(input: &str) -> Result<Vec<Monkey>, Box<dyn Error>> {
 }
 
 fn run_monkey_game(input: &str, num_rounds: usize) -> Result<i64, Box<dyn Error>> {
-    let mut monkeys: Vec<Monkey> = parse_monkey_list(input)?;
+    let monkeys: Vec<Monkey> = parse_monkey_list(input)?;
+    let mut monkey_business: Vec<i64> = vec![0; monkeys.len()];
     for _ in 0..num_rounds {
-        for monkey in &monkeys {
-            println!("Monkey {}: {}", monkey.id, monkey.items);
-        }
-        println!();
-
-        let mut airborne_items: Vec<Vec<i64>> = vec![Vec::new(); monkeys.len()];
-        for monkey in &mut monkeys {
-            for item in &monkey.items.0 {
-                let (target, value) = monkey.inspect_and_throw_item(*item);
-                airborne_items[target].push(value);
-                monkey.activity += 1;
+        if DEBUG {
+            for monkey in &monkeys {
+                println!("Monkey {}: {}", monkey.id, monkey.items);
             }
+            println!();
         }
-        for i in 0..monkeys.len() {
-            monkeys[i].items = ItemList(airborne_items[i].clone());
+
+        for monkey in &monkeys {
+            let items: &mut Vec<i64> = &mut monkey.items.0.borrow_mut();
+            for item in items.iter() {
+                let (target, value) = monkey.inspect_and_throw_item(*item);
+                monkey_business[monkey.id] += 1;
+                let target_item_list: &mut Vec<i64> = &mut monkeys[target].items.0.borrow_mut();
+                target_item_list.push(value);
+            }
+            items.drain(..);
         }
     }
-    let mut monkey_business: Vec<i64> = monkeys.iter().map(|monkey| monkey.activity).collect();
     monkey_business.sort();
     monkey_business.reverse();
     dbg!(monkey_business.clone());
     Ok(monkey_business[0] * monkey_business[1])
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let input = fs::read_to_string("input.txt").unwrap();
+    let monkey_business = run_monkey_game(&input, 20)?;
+    println!("monkey business after 20 rounds: {}", monkey_business);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -167,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_example() -> Result<(), Box<dyn Error>> {
-        let monkey_business = run_monkey_game(TEST_INPUT, 2)?;
+        let monkey_business = run_monkey_game(TEST_INPUT, 20)?;
         assert_eq!(monkey_business, 10605);
         Ok(())
     }
