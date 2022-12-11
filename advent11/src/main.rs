@@ -107,12 +107,14 @@ impl fmt::Display for ItemList {
 impl Monkey {
     /// Implement the thing where a monkey inspects an item and throws it to another monkey.
     /// Returns a tuple of the target monkey index, and the new "worry value" of the item.
-    fn inspect_and_throw_item(&self, worry: i64) -> (usize, i64) {
+    fn inspect_and_throw_item(&self, worry: i64, chill_out: bool) -> (usize, i64) {
         let mut value = worry;
         // println!("Monkey {} inspects an item with a worry level of {}.", self.id, worry);
         value = self.op.apply(value);
         // println!("Value after operation is {}.", value);
-        value /= 3;
+        if chill_out {
+            value /= 3;
+        }
         // println!("Value is divided by 3 to give {}.", value);
         let target = if value % self.div == 0 {
             // println!("Value is divisible by {}.", self.div);
@@ -134,8 +136,11 @@ fn parse_monkey_list(input: &str) -> Result<Vec<Monkey>, Box<dyn Error>> {
     Ok(monkeys)
 }
 
-fn run_monkey_game(input: &str, num_rounds: usize) -> Result<i64, Box<dyn Error>> {
+fn run_monkey_game(input: &str, num_rounds: usize, chill_out: bool) -> Result<i64, Box<dyn Error>> {
     let monkeys: Vec<Monkey> = parse_monkey_list(input)?;
+
+    let modulo: i64 = monkeys.iter().map(|monkey| monkey.div).product();
+    dbg!(modulo);
     let mut monkey_business: Vec<i64> = vec![0; monkeys.len()];
     for _ in 0..num_rounds {
         if DEBUG {
@@ -148,10 +153,10 @@ fn run_monkey_game(input: &str, num_rounds: usize) -> Result<i64, Box<dyn Error>
         for monkey in &monkeys {
             let items: &mut Vec<i64> = &mut monkey.items.0.borrow_mut();
             for item in items.iter() {
-                let (target, value) = monkey.inspect_and_throw_item(*item);
+                let (target, value) = monkey.inspect_and_throw_item(*item, chill_out);
                 monkey_business[monkey.id] += 1;
                 let target_item_list: &mut Vec<i64> = &mut monkeys[target].items.0.borrow_mut();
-                target_item_list.push(value);
+                target_item_list.push(value % modulo);
             }
             items.drain(..);
         }
@@ -164,8 +169,10 @@ fn run_monkey_game(input: &str, num_rounds: usize) -> Result<i64, Box<dyn Error>
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = fs::read_to_string("input.txt").unwrap();
-    let monkey_business = run_monkey_game(&input, 20)?;
+    let monkey_business = run_monkey_game(&input, 20, true)?;
     println!("monkey business after 20 rounds: {}", monkey_business);
+    let monkey_business_2 = run_monkey_game(&input, 10000, false)?;
+    println!("monkey business after 10000 non-chill rounds: {}", monkey_business_2);
     Ok(())
 }
 
@@ -175,8 +182,15 @@ mod tests {
 
     #[test]
     fn test_example() -> Result<(), Box<dyn Error>> {
-        let monkey_business = run_monkey_game(TEST_INPUT, 20)?;
+        let monkey_business = run_monkey_game(TEST_INPUT, 20, true)?;
         assert_eq!(monkey_business, 10605);
+        Ok(())
+    }
+
+    #[test]
+    fn test_example_2() -> Result<(), Box<dyn Error>> {
+        let monkey_business = run_monkey_game(TEST_INPUT, 10000, false)?;
+        assert_eq!(monkey_business, 2713310158);
         Ok(())
     }
 }
